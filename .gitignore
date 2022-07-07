@@ -53,3 +53,4 @@ dkms.conf
 
 # bins
 test
+tests/*.test

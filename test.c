@@ -9,15 +9,11 @@ int main() {
   ReflectLexer lexer;
   ReflectToken token;
   reflect_lexer_init(&lexer, "1 10 100");
-  reflect_lexer_token_next(&lexer, &token);
-  reflect_lexer_token_current(&lexer, &token);
-  printf("%d\n", token.integer);
 
-  reflect_lexer_token_next(&lexer, &token);
-  reflect_lexer_token_current(&lexer, &token);
-  printf("%d\n", token.integer);
-
-  reflect_lexer_token_next(&lexer, &token);
-  reflect_lexer_token_current(&lexer, &token);
-  printf("%d\n", token.integer);
+  while (reflect_lexer_token_next(&lexer, &token)) {
+    if (token.type == REFLECT_TOKEN_EOF) {
+      break;
+    }
+    printf("%ld\n", token.integer);
+  }
 }
