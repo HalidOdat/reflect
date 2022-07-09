@@ -52,5 +52,6 @@ Mkfile.old
 dkms.conf
 
 # bins
+main
 test
 tests/*.test

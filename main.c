@@ -10,18 +10,20 @@ int main() {
   ReflectToken token;
   reflect_lexer_init(&lexer, "1 10 100");
 
-
+  uint32_t count = 1;
   while (true) {
-    printf("%s\n", lexer.source);
-    printf("%s\n", lexer.stream);
     if (!reflect_lexer_token_next(&lexer, &token)) {
       printf("ERROR: %s\n", reflect_lexer_error_string_get(&lexer));
-      break;
+      continue;
     }
 
     if (token.type == REFLECT_TOKEN_EOF) {
       break;
     }
-    printf("%ld\n", token.integer);
+    printf("Token (%s) #%u: %ld\n", reflect_token_type_to_string(token.type), count, token.as.integer);
+
+    count++;
   }
+
+  return 0;
 }

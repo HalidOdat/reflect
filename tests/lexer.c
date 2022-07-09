@@ -25,7 +25,7 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
     if (test_cases->type != token.type) {
       // TODO: Display type name.
       printf(
-        "    Assertion #%d: FAILED - type mismatch - expected: '%s', got '%s'n",
+        "    Assertion #%d: FAILED - type mismatch - expected: '%s', got '%s'\n",
         test_case_number,
         reflect_token_type_to_string(test_cases->type),
         reflect_token_type_to_string(token.type)
@@ -60,12 +60,22 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
   }
 }
 
+void lexer_punctuator_tests();
+void lexer_integer_tests();
+
 int main(int argc, const char* argv[]) {
   if (argc > 1 && strcmp(argv[1], "--verbose")) {
     silent = false;
   }
 
   printf("Lexer Tests:\n");
+  lexer_integer_tests();
+  lexer_punctuator_tests();
+
+  return 0;
+}
+
+void lexer_integer_tests() {
   lexer_test(
     "Simple Integer Lexing",
     "1 2 3 100000",
@@ -77,57 +87,77 @@ int main(int argc, const char* argv[]) {
       { 0 }
     }
   );
+}
 
+void lexer_punctuator_tests() {
   lexer_test(
     "Single Character Punctuator Lexing",
-    "[ ] ( ) { } . & * + - ~ ! / % < > ^ | ? : ; = #",
+    "[ ] ( ) { } . , & * + - ~ ! / % < > ^ | ? : ; = #",
     (ReflectToken[]) {
-      { .type = REFLECT_TOKEN_LBRACKET, },
-      { .type = REFLECT_TOKEN_RBRACKET, },
-      { .type = REFLECT_TOKEN_LPAREN, },
-      { .type = REFLECT_TOKEN_RPAREN, },
-      { .type = REFLECT_TOKEN_LBRACE, },
-      { .type = REFLECT_TOKEN_RBRACE, },
-      { .type = REFLECT_TOKEN_DOT, },
-      { .type = REFLECT_TOKEN_AMPERSAND, },
-      { .type = REFLECT_TOKEN_STAR, },
-      { .type = REFLECT_TOKEN_PLUS, },
-      { .type = REFLECT_TOKEN_MINUS, },
-      { .type = REFLECT_TOKEN_TILDE, },
-      { .type = REFLECT_TOKEN_NOT, },
-      { .type = REFLECT_TOKEN_SLASH, },
-      { .type = REFLECT_TOKEN_PERCENT, },
-      { .type = REFLECT_TOKEN_LESS, },
-      { .type = REFLECT_TOKEN_GREATER, },
-      { .type = REFLECT_TOKEN_CARET, },
-      { .type = REFLECT_TOKEN_PIPE, },
-      { .type = REFLECT_TOKEN_QUESTION, },
-      { .type = REFLECT_TOKEN_COLON, },
-      { .type = REFLECT_TOKEN_SEMICOLON, },
-      { .type = REFLECT_TOKEN_ASSIGN, },
-      { .type = REFLECT_TOKEN_HASH, },
+      { .type = REFLECT_TOKEN_LBRACKET },
+      { .type = REFLECT_TOKEN_RBRACKET },
+      { .type = REFLECT_TOKEN_LPAREN },
+      { .type = REFLECT_TOKEN_RPAREN },
+      { .type = REFLECT_TOKEN_LBRACE },
+      { .type = REFLECT_TOKEN_RBRACE },
+      { .type = REFLECT_TOKEN_DOT },
+      { .type = REFLECT_TOKEN_COMMA },
+      { .type = REFLECT_TOKEN_AMPERSAND },
+      { .type = REFLECT_TOKEN_STAR },
+      { .type = REFLECT_TOKEN_PLUS },
+      { .type = REFLECT_TOKEN_MINUS },
+      { .type = REFLECT_TOKEN_TILDE },
+      { .type = REFLECT_TOKEN_NOT },
+      { .type = REFLECT_TOKEN_SLASH },
+      { .type = REFLECT_TOKEN_PERCENT },
+      { .type = REFLECT_TOKEN_LESS },
+      { .type = REFLECT_TOKEN_GREATER },
+      { .type = REFLECT_TOKEN_CARET },
+      { .type = REFLECT_TOKEN_PIPE },
+      { .type = REFLECT_TOKEN_QUESTION },
+      { .type = REFLECT_TOKEN_COLON },
+      { .type = REFLECT_TOKEN_SEMICOLON },
+      { .type = REFLECT_TOKEN_ASSIGN },
+      { .type = REFLECT_TOKEN_HASH },
       { 0 }
     }
   );
 
   lexer_test(
     "Double Character Punctuator Lexing",
-    // "-> ++ -- << >> <= >= == != && || *= /= %= += -= &= ^= |= ##",
-    "<= >= == != *= /= %= += -= ^= ##",
+    "-> ++ -- << >> <= >= == != && || *= /= %= += -= &= ^= ##",
     (ReflectToken[]) {
-      { .type = REFLECT_TOKEN_LESS_EQUAL, },
-      { .type = REFLECT_TOKEN_GREATER_EQUAL, },
-      { .type = REFLECT_TOKEN_EQUALS, },
-      { .type = REFLECT_TOKEN_NOT_EQUALS, },
-      { .type = REFLECT_TOKEN_MUL_ASSIGN, },
-      { .type = REFLECT_TOKEN_DIV_ASSIGN, },
-      { .type = REFLECT_TOKEN_MOD_ASSIGN, },
-      { .type = REFLECT_TOKEN_ADD_ASSIGN, },
-      { .type = REFLECT_TOKEN_SUB_ASSIGN, },
-      { .type = REFLECT_TOKEN_XOR_ASSIGN, },
-      { .type = REFLECT_TOKEN_HASH_HASH, },
+      { .type = REFLECT_TOKEN_ARROW },
+      { .type = REFLECT_TOKEN_INCREMENT },
+      { .type = REFLECT_TOKEN_DECREMENT },
+      { .type = REFLECT_TOKEN_LSHIFT },
+      { .type = REFLECT_TOKEN_RSHIFT },
+      { .type = REFLECT_TOKEN_LESS_EQUAL },
+      { .type = REFLECT_TOKEN_GREATER_EQUAL },
+      { .type = REFLECT_TOKEN_EQUALS },
+      { .type = REFLECT_TOKEN_NOT_EQUALS },
+      { .type = REFLECT_TOKEN_LOGICAL_AND },
+      { .type = REFLECT_TOKEN_LOGICAL_OR },
+      { .type = REFLECT_TOKEN_MUL_ASSIGN },
+      { .type = REFLECT_TOKEN_DIV_ASSIGN },
+      { .type = REFLECT_TOKEN_MOD_ASSIGN },
+      { .type = REFLECT_TOKEN_ADD_ASSIGN },
+      { .type = REFLECT_TOKEN_SUB_ASSIGN },
+      { .type = REFLECT_TOKEN_AND_ASSIGN },
+      { .type = REFLECT_TOKEN_XOR_ASSIGN },
+      { .type = REFLECT_TOKEN_HASH_HASH },
       { 0 }
     }
   );
-  return 0;
+
+  lexer_test(
+    "Triple Character Punctuator Lexing",
+    "<<= >>= ...",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_LSHIFT_ASSIGN },
+      { .type = REFLECT_TOKEN_RSHIFT_ASSIGN },
+      { .type = REFLECT_TOKEN_ELLIPSIS },
+      { 0 }
+    }
+  );
 }
