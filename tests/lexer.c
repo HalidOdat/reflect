@@ -18,57 +18,37 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
   int test_case_number = 1;
   while (test_cases->type != REFLECT_TOKEN_EOF) {
     if (!reflect_lexer_token_next(&lexer, &token)) {
-      printf("    Assertion #%d: FAILED - could not lexn", test_case_number);
+      printf("    Assertion #%d: FAILED - Lex Error: %s\n", test_case_number, reflect_lexer_error_string_get(&lexer));
       return;
     }
 
     if (test_cases->type != token.type) {
       // TODO: Display type name.
-      printf("    Assertion #%d: FAILED - type mismatchn", test_case_number);
+      printf(
+        "    Assertion #%d: FAILED - type mismatch - expected: '%s', got '%s'n",
+        test_case_number,
+        reflect_token_type_to_string(test_cases->type),
+        reflect_token_type_to_string(token.type)
+      );
       return;
     }
 
     switch (token.type) {
+      case REFLECT_TOKEN_EOF:
+        assert(false && "Unreachable: This check if in the loop");
+        break;
       case REFLECT_TOKEN_INTEGER:
-        if (token.integer != test_cases->integer){
-          printf("    Assertion #%d: FAILED - Expected integer %ld, got %ldn", test_case_number, test_cases->integer, token.integer);
+        if (token.as.integer != test_cases->as.integer){
+          printf("    Assertion #%d: FAILED - Expected integer %ld, got %ld\n", test_case_number, test_cases->as.integer, token.as.integer);
         } else if (!silent) {
-          printf("    Assertion #%d: PASSED!n", test_case_number);
+          printf("    Assertion #%d: PASSED\n", test_case_number);
         }
         break;
-      case REFLECT_TOKEN_LBRACKET:
-      case REFLECT_TOKEN_RBRACKET:
-      case REFLECT_TOKEN_LPAREN:
-      case REFLECT_TOKEN_RPAREN:
-      case REFLECT_TOKEN_LBRACE:
-      case REFLECT_TOKEN_RBRACE:
-      case REFLECT_TOKEN_DOT:
-      case REFLECT_TOKEN_AMPERSAND:
-      case REFLECT_TOKEN_STAR:
-      case REFLECT_TOKEN_PLUS:
-      case REFLECT_TOKEN_MINUS:
-      case REFLECT_TOKEN_TILDE:
-      case REFLECT_TOKEN_EXCLAMATION:
-      case REFLECT_TOKEN_SLASH:
-      case REFLECT_TOKEN_PERCENT:
-      case REFLECT_TOKEN_LESS:
-      case REFLECT_TOKEN_GREATER:
-      case REFLECT_TOKEN_CARET:
-      case REFLECT_TOKEN_PIPE:
-      case REFLECT_TOKEN_QUESTION:
-      case REFLECT_TOKEN_COLON:
-      case REFLECT_TOKEN_SEMICOLON:
-      case REFLECT_TOKEN_EQUAL:
-      case REFLECT_TOKEN_HASH:
+      default:
         if (!silent) {
           printf("    Assertion #%d: PASSED\n", test_case_number);
         }
         break;
-      case REFLECT_TOKEN_EOF:
-        assert(false && "Unreachable: This check if in the loop");
-        break;
-      default:
-        assert(false && "Unreachable: Unknown token type");
     }
 
     test_case_number++;
@@ -90,10 +70,10 @@ int main(int argc, const char* argv[]) {
     "Simple Integer Lexing",
     "1 2 3 100000",
     (ReflectToken[]) {
-      { .type = REFLECT_TOKEN_INTEGER, .integer = 1 },
-      { .type = REFLECT_TOKEN_INTEGER, .integer = 2 },
-      { .type = REFLECT_TOKEN_INTEGER, .integer = 3 },
-      { .type = REFLECT_TOKEN_INTEGER, .integer = 100000 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 1 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 2 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 3 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 100000 },
       { 0 }
     }
   );
@@ -114,7 +94,7 @@ int main(int argc, const char* argv[]) {
       { .type = REFLECT_TOKEN_PLUS, },
       { .type = REFLECT_TOKEN_MINUS, },
       { .type = REFLECT_TOKEN_TILDE, },
-      { .type = REFLECT_TOKEN_EXCLAMATION, },
+      { .type = REFLECT_TOKEN_NOT, },
       { .type = REFLECT_TOKEN_SLASH, },
       { .type = REFLECT_TOKEN_PERCENT, },
       { .type = REFLECT_TOKEN_LESS, },
@@ -124,8 +104,28 @@ int main(int argc, const char* argv[]) {
       { .type = REFLECT_TOKEN_QUESTION, },
       { .type = REFLECT_TOKEN_COLON, },
       { .type = REFLECT_TOKEN_SEMICOLON, },
-      { .type = REFLECT_TOKEN_EQUAL, },
+      { .type = REFLECT_TOKEN_ASSIGN, },
       { .type = REFLECT_TOKEN_HASH, },
+      { 0 }
+    }
+  );
+
+  lexer_test(
+    "Double Character Punctuator Lexing",
+    // "-> ++ -- << >> <= >= == != && || *= /= %= += -= &= ^= |= ##",
+    "<= >= == != *= /= %= += -= ^= ##",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_LESS_EQUAL, },
+      { .type = REFLECT_TOKEN_GREATER_EQUAL, },
+      { .type = REFLECT_TOKEN_EQUALS, },
+      { .type = REFLECT_TOKEN_NOT_EQUALS, },
+      { .type = REFLECT_TOKEN_MUL_ASSIGN, },
+      { .type = REFLECT_TOKEN_DIV_ASSIGN, },
+      { .type = REFLECT_TOKEN_MOD_ASSIGN, },
+      { .type = REFLECT_TOKEN_ADD_ASSIGN, },
+      { .type = REFLECT_TOKEN_SUB_ASSIGN, },
+      { .type = REFLECT_TOKEN_XOR_ASSIGN, },
+      { .type = REFLECT_TOKEN_HASH_HASH, },
       { 0 }
     }
   );

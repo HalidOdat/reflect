@@ -10,7 +10,15 @@ int main() {
   ReflectToken token;
   reflect_lexer_init(&lexer, "1 10 100");
 
-  while (reflect_lexer_token_next(&lexer, &token)) {
+
+  while (true) {
+    printf("%s\n", lexer.source);
+    printf("%s\n", lexer.stream);
+    if (!reflect_lexer_token_next(&lexer, &token)) {
+      printf("ERROR: %s\n", reflect_lexer_error_string_get(&lexer));
+      break;
+    }
+
     if (token.type == REFLECT_TOKEN_EOF) {
       break;
     }
