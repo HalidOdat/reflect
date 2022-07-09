@@ -8,7 +8,7 @@ int main() {
 
   ReflectLexer lexer;
   ReflectToken token;
-  reflect_lexer_init(&lexer, "1 10 100");
+  reflect_lexer_init(&lexer, "1 10 100\n1\n  1");
 
   uint32_t count = 1;
   while (true) {
@@ -20,7 +20,13 @@ int main() {
     if (token.type == REFLECT_TOKEN_EOF) {
       break;
     }
-    printf("Token (%s) #%u: %ld\n", reflect_token_type_to_string(token.type), count, token.as.integer);
+    printf(
+      "Token (%s) :%u:%u: %ld\n",
+      reflect_token_type_to_string(token.type),
+      token.location.line,
+      token.location.column,
+      token.as.integer
+    );
 
     count++;
   }

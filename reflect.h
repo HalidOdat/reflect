@@ -62,9 +62,15 @@ typedef enum ReflectTokenModifier {
   REFLECT_TOKEN_MODIFIER_NONE,
 } ReflectTokenModifier;
 
+typedef struct ReflectSourceLocation {
+  uint32_t line;
+  uint32_t column;
+} ReflectSourceLocation;
+
 typedef struct ReflectToken {
-  ReflectTokenType type;
-  
+  ReflectTokenType      type;
+  ReflectSourceLocation location;
+
   union {
     uint64_t integer;
   } as;
@@ -78,10 +84,11 @@ typedef enum ReflectError {
 #define REFLECT_LEXER_ERROR_STRING_MAX_LENGTH 512
 
 typedef struct ReflectLexer {
-  const char*  source;
-  const char*  stream;
-  ReflectError error_code;
-  char         error_string[REFLECT_LEXER_ERROR_STRING_MAX_LENGTH];
+  const char*           source;
+  const char*           stream;
+  ReflectError          error_code;
+  char                  error_string[REFLECT_LEXER_ERROR_STRING_MAX_LENGTH];
+  ReflectSourceLocation location;
 } ReflectLexer;
 
 extern void         reflect_lexer_init(ReflectLexer* lexer, const char* source);
@@ -162,6 +169,9 @@ REFLECT_API const char* reflect_token_type_to_string(ReflectTokenType token_type
 REFLECT_API void reflect_lexer_init(ReflectLexer* lexer, const char* source) {
   lexer->source          = source;
   lexer->stream          = source;
+  lexer->location.line   = 1;
+  lexer->location.column = 1;
+  
   lexer->error_code      = REFLECT_ERROR_NONE;
   strcpy(lexer->error_string, "");
 }
@@ -179,6 +189,7 @@ static char _reflect_lexer_char_current(ReflectLexer* lexer) {
 }
 
 static void _reflect_lexer_char_advance(ReflectLexer* lexer) {
+  ++lexer->location.column;
   ++lexer->stream;
 }
 
@@ -231,18 +242,24 @@ REFLECT_API bool reflect_lexer_token_next(ReflectLexer* lexer, ReflectToken* tok
 
 
 _reflect_lexer_again:
+  token->location = lexer->location;
   switch (_reflect_lexer_char_current(lexer)) {
     case '\0':
       token->type = REFLECT_TOKEN_EOF;
       return true;
+    case '\n':
+      lexer->location.line   += 1;
+      lexer->location.column  = 0;
+
+      // fallthrough
     case ' ':
       _reflect_lexer_char_advance(lexer);
       goto _reflect_lexer_again;
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
-      token->type = REFLECT_TOKEN_INTEGER;
+      token->type     = REFLECT_TOKEN_INTEGER;
+      token->location = lexer->location;
       return _reflect_lexer_integer_lex(lexer, &token->as.integer);
-
     _REFLECT_LEXER_CASE1('[', REFLECT_TOKEN_LBRACKET);
     _REFLECT_LEXER_CASE1(']', REFLECT_TOKEN_RBRACKET);
     _REFLECT_LEXER_CASE1('(', REFLECT_TOKEN_LPAREN);
@@ -254,27 +271,24 @@ _reflect_lexer_again:
     _REFLECT_LEXER_CASE1('?', REFLECT_TOKEN_QUESTION);
     _REFLECT_LEXER_CASE1(':', REFLECT_TOKEN_COLON);
     _REFLECT_LEXER_CASE1(';', REFLECT_TOKEN_SEMICOLON);
-
     _REFLECT_LEXER_CASE2('#', REFLECT_TOKEN_HASH,      '#', REFLECT_TOKEN_HASH_HASH);
     _REFLECT_LEXER_CASE2('^', REFLECT_TOKEN_CARET,     '=', REFLECT_TOKEN_XOR_ASSIGN);
     _REFLECT_LEXER_CASE2('=', REFLECT_TOKEN_ASSIGN,    '=', REFLECT_TOKEN_EQUALS);
     _REFLECT_LEXER_CASE2('%', REFLECT_TOKEN_PERCENT,   '=', REFLECT_TOKEN_MOD_ASSIGN);
     _REFLECT_LEXER_CASE2('!', REFLECT_TOKEN_NOT,       '=', REFLECT_TOKEN_NOT_EQUALS);
     _REFLECT_LEXER_CASE2('*', REFLECT_TOKEN_STAR,      '=', REFLECT_TOKEN_MUL_ASSIGN);
-
     _REFLECT_LEXER_CASE3('&', REFLECT_TOKEN_AMPERSAND, '=', REFLECT_TOKEN_AND_ASSIGN, '&', REFLECT_TOKEN_LOGICAL_AND);
     _REFLECT_LEXER_CASE3('|', REFLECT_TOKEN_PIPE,      '=', REFLECT_TOKEN_OR_ASSIGN,  '|', REFLECT_TOKEN_LOGICAL_OR);
     _REFLECT_LEXER_CASE3('+', REFLECT_TOKEN_PLUS,      '=', REFLECT_TOKEN_ADD_ASSIGN, '+', REFLECT_TOKEN_INCREMENT);
-
     case '.':
       token->type = REFLECT_TOKEN_DOT;
       _reflect_lexer_char_advance(lexer);
       if (lexer->stream[0] == '.' && lexer->stream[1] == '.') {
-        lexer->stream += 2;
+        _reflect_lexer_char_advance(lexer);
+        _reflect_lexer_char_advance(lexer);
         token->type = REFLECT_TOKEN_ELLIPSIS;
       }
       return true;
-
     case '-':
       token->type = REFLECT_TOKEN_MINUS;
       _reflect_lexer_char_advance(lexer);
@@ -285,8 +299,8 @@ _reflect_lexer_again:
       } else if (_reflect_lexer_char_next_if(lexer, '>')) {
         token->type = REFLECT_TOKEN_ARROW;
       }
+      token->location = lexer->location;
       return true;
-
     case '/':
       token->type = REFLECT_TOKEN_SLASH;
       _reflect_lexer_char_advance(lexer);
@@ -297,8 +311,8 @@ _reflect_lexer_again:
       // else if (_reflect_lexer_char_next_if(lexer, '/')) {
       //   token->type = REFLECT_TOKEN_SUB_ASSIGN;
       // }
+      token->location = lexer->location;
       return true;
-
     case '<':
       token->type = REFLECT_TOKEN_LESS;
       _reflect_lexer_char_advance(lexer);
@@ -310,8 +324,8 @@ _reflect_lexer_again:
           token->type = REFLECT_TOKEN_LSHIFT_ASSIGN;
         }
       }
+      token->location = lexer->location;
       return true;
-
     case '>':
       token->type = REFLECT_TOKEN_GREATER;
       _reflect_lexer_char_advance(lexer);
@@ -323,8 +337,8 @@ _reflect_lexer_again:
           token->type = REFLECT_TOKEN_RSHIFT_ASSIGN;
         }
       }
+      token->location = lexer->location;
       return true;
-
     default:
       lexer->error_code = REFLECT_ERROR_INVALID_CHARACTER;
       snprintf(
