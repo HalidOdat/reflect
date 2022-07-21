@@ -1,3 +1,5 @@
+// TODO: Handle negative test cases
+
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -55,7 +57,7 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
     test_cases++;
   }
 
-  if (silent) {
+  if (!silent) {
     printf("    All Test Assertions Passed!\n");
   }
 }
@@ -76,6 +78,7 @@ int main(int argc, const char* argv[]) {
 }
 
 void lexer_integer_tests() {
+  printf(" Integer Tests:\n");
   lexer_test(
     "Simple Integer Lexing",
     "1 2 3 100000",
@@ -116,6 +119,7 @@ void lexer_integer_tests() {
 }
 
 void lexer_punctuator_tests() {
+  printf(" Punctuator Tests:\n");
   lexer_test(
     "Single Character Punctuator Lexing",
     "[ ] ( ) { } . , & * + - ~ ! / % < > ^ | ? : ; = #",
