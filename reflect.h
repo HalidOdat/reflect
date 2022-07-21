@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 typedef enum ReflectTokenType {
   REFLECT_TOKEN_EOF,
+  REFLECT_TOKEN_IDENTIFIER,
   REFLECT_TOKEN_INTEGER,
   REFLECT_TOKEN_LBRACKET,
   REFLECT_TOKEN_RBRACKET,
@@ -62,7 +64,11 @@ typedef enum ReflectModifier {
   REFLECT_MODIFIER_NONE,
   REFLECT_MODIFIER_OCTAL,
   REFLECT_MODIFIER_HEXADECIMAL,
+  REFLECT_MODIFIER_COUNT,
 } ReflectModifier;
+
+// TODO: Temporary
+#define REFLECT_MAX_INDENTIFIER_LENGTH 256
 
 typedef struct ReflectSourceLocation {
   uint32_t line;
@@ -76,6 +82,7 @@ typedef struct ReflectToken {
 
   union {
     uint64_t integer;
+    char     identifier[REFLECT_MAX_INDENTIFIER_LENGTH];
   } as;
 } ReflectToken;
 
@@ -121,6 +128,7 @@ extern const char*  reflect_token_type_to_string(ReflectTokenType token_type);
 REFLECT_API const char* reflect_token_type_to_string(ReflectTokenType token_type) {
   switch (token_type) {
     case REFLECT_TOKEN_EOF:           return "<EOF>";
+    case REFLECT_TOKEN_IDENTIFIER:    return "identifier";
     case REFLECT_TOKEN_INTEGER:       return "integer";
     case REFLECT_TOKEN_LBRACKET:      return "[";
     case REFLECT_TOKEN_RBRACKET:      return "]";
@@ -221,7 +229,6 @@ static bool reflect__is_digit(const char c, uint8_t radix) {
     case 10: return c >= '0' && c <= '9';
     case 16: return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
-
   assert(false && "Unreachable");
 }
 
@@ -259,7 +266,6 @@ static const char* reflect__integer_radix_name(uint8_t radix) {
     case 10: return "decimal";
     case 16: return "hexadecimal";
   }
-
   assert(false && "Unreachable");
 }
 
@@ -271,10 +277,24 @@ static bool reflect__lexer_current_char_to_digit(ReflectLexer* lexer, uint8_t ra
   return reflect__to_digit(reflect__lexer_char_current(lexer), radix, digit);
 }
 
+static bool reflect__lexer_token_identifier_lex(ReflectLexer* lexer, ReflectToken* token) {
+  token->type = REFLECT_TOKEN_IDENTIFIER;
+  size_t count = 0;
+  char c;
+  while (isalnum(c = reflect__lexer_char_current(lexer)) || c == '_') {
+    if (count + 2 == REFLECT_MAX_INDENTIFIER_LENGTH) {
+      assert(false && "FIXME");
+    }
+    token->as.identifier[count++] = c;
+    reflect__lexer_char_advance(lexer);
+  }
+
+  token->as.identifier[count] = '\0';
+  return true;
+}
+
 static bool reflect__lexer_token_integer_lex(ReflectLexer* lexer, ReflectToken* token) {
   token->type     = REFLECT_TOKEN_INTEGER;
-  token->modifier = REFLECT_MODIFIER_NONE;
-  token->location = lexer->location;
 
   uint64_t result = 0;
   uint8_t  radix  = 10;
@@ -339,6 +359,7 @@ REFLECT_API bool reflect_lexer_token_next(ReflectLexer* lexer, ReflectToken* tok
 
 reflect__lexer_again:
   token->location = lexer->location;
+  token->modifier = REFLECT_MODIFIER_NONE;
   switch (reflect__lexer_char_current(lexer)) {
     case '\0':
       token->type = REFLECT_TOKEN_EOF;
@@ -351,6 +372,18 @@ reflect__lexer_again:
     case ' ':
       reflect__lexer_char_advance(lexer);
       goto reflect__lexer_again;
+
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
+    case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
+    case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': 
+    case 'v': case 'w': case 'x': case 'y': case 'z':
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
+    case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N':
+    case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U':
+    case 'V': case 'W': case 'X': case 'Y': case 'Z':
+    case '_':
+      return reflect__lexer_token_identifier_lex(lexer, token);
+
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
       return reflect__lexer_token_integer_lex(lexer, token);

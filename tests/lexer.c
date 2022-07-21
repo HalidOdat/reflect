@@ -35,24 +35,34 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
       return;
     }
 
+    bool passed = false;
     switch (token.type) {
       case REFLECT_TOKEN_EOF:
-        assert(false && "Unreachable: This check if in the loop");
+        assert(false && "Unreachable: This check is in the loop");
+        break;
+      case REFLECT_TOKEN_IDENTIFIER:
+        if (strcmp(token.as.identifier, test_cases->as.identifier) != 0) {
+          printf("    Assertion #%d: FAILED - Expected identifier \"%s\", got \"%s\"\n", test_case_number, test_cases->as.identifier, token.as.identifier);
+        } else {
+          passed = true;
+        }
         break;
       case REFLECT_TOKEN_INTEGER:
         if (token.as.integer != test_cases->as.integer){
           printf("    Assertion #%d: FAILED - Expected integer %ld, got %ld\n", test_case_number, test_cases->as.integer, token.as.integer);
         } else if (token.modifier != test_cases->modifier) {
           printf("    Assertion #%d: FAILED - Modifier mismatch\n", test_case_number);
-        } else if (!silent) {
-          printf("    Assertion #%d: PASSED\n", test_case_number);
+        } else {
+          passed = true;
         }
         break;
       default:
-        if (!silent) {
-          printf("    Assertion #%d: PASSED\n", test_case_number);
-        }
+        passed = true;
         break;
+    }
+
+    if (passed && !silent) {
+      printf("    Assertion #%d: PASSED\n", test_case_number);
     }
 
     test_case_number++;
@@ -64,8 +74,9 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
   }
 }
 
-void lexer_punctuator_tests();
 void lexer_integer_tests();
+void lexer_punctuator_tests();
+void lexer_identifier_tests();
 
 int main(int argc, const char* argv[]) {
   if (argc > 1 && strcmp(argv[1], "--verbose")) {
@@ -75,8 +86,47 @@ int main(int argc, const char* argv[]) {
   printf("Lexer Tests:\n");
   lexer_integer_tests();
   lexer_punctuator_tests();
+  lexer_identifier_tests();
 
   return 0;
+}
+
+void lexer_identifier_tests() {
+  printf(" Identifier Tests:\n");
+  lexer_test(
+    "Simple Identifier Lexing",
+    "x y z",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "x" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "y" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "z" },
+      { 0 }
+    }
+  );
+
+  lexer_test(
+    "Alphanumerical Identifier Lexing",
+    "get2 test1234020 a0b1c2d3",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "get2" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "test1234020" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "a0b1c2d3" },
+      { 0 }
+    }
+  );
+
+  lexer_test(
+    "Underscore Identifier Lexing",
+    "_ __attribute__ __linux__ _1_ _HELLO____1223___",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "_" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "__attribute__" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "__linux__" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "_1_" },
+      { .type = REFLECT_TOKEN_IDENTIFIER, .as.identifier = "_HELLO____1223___" },
+      { 0 }
+    }
+  );
 }
 
 void lexer_integer_tests() {
