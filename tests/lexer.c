@@ -87,6 +87,32 @@ void lexer_integer_tests() {
       { 0 }
     }
   );
+
+  lexer_test(
+    "Simple Hexadecimal Integer Lexing",
+    "0x0 0x1 0x100000 0xabcdef 0xABCDEF 0x0aB6ceFe",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x1 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x100000 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xabcdef },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xABCDEF },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0aB6ceFe },
+      { 0 }
+    }
+  );
+
+  lexer_test(
+    "Simple Octal Integer Lexing",
+    "00 01 01234567 000333300",
+    (ReflectToken[]) {
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 00 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01234567 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 000333300 },
+      { 0 }
+    }
+  );
 }
 
 void lexer_punctuator_tests() {

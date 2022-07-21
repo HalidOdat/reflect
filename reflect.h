@@ -78,7 +78,11 @@ typedef struct ReflectToken {
 
 typedef enum ReflectError {
   REFLECT_ERROR_NONE,
-  REFLECT_ERROR_INVALID_CHARACTER,
+  REFLECT_ERROR_LEXER_BEGIN,
+  REFLECT_ERROR_INVALID_CHARACTER       = REFLECT_ERROR_LEXER_BEGIN,
+  REFLECT_ERROR_INVALID_INTEGER,
+  REFLECT_ERROR_LEXER_END               = REFLECT_ERROR_INVALID_INTEGER,
+  REFLECT_ERROR_COUNT,
 } ReflectError;
 
 #define REFLECT_LEXER_ERROR_STRING_MAX_LENGTH 512
@@ -107,6 +111,7 @@ extern const char*  reflect_token_type_to_string(ReflectTokenType token_type);
 
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 
 #define REFLECT_API
 
@@ -201,14 +206,102 @@ static bool _reflect_lexer_char_next_if(ReflectLexer* lexer, const char c) {
   return false;
 }
 
+static bool _reflect_is_digit_with_radix(const char c, uint8_t radix) {
+  switch (radix) {
+    case 2:  return c == '0' || c == '1';
+    case 8:  return c >= '0' && c <= '7';
+    case 10: return c >= '0' && c <= '9';
+    case 16: return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+  }
+
+  assert(false && "Unreachable");
+}
+
+static bool _reflect_char_to_digit_with_radix(const char c, const uint8_t radix, uint8_t* digit) {
+  if (!_reflect_is_digit_with_radix(c, radix)) {
+    return false;
+  }
+
+  static uint8_t digits[256] = {
+    ['0'] = 0,
+    ['1'] = 1,
+    ['2'] = 2,
+    ['3'] = 3, 
+    ['4'] = 4, 
+    ['5'] = 5, 
+    ['6'] = 6, 
+    ['7'] = 7, 
+    ['8'] = 8, 
+    ['9'] = 9, 
+    ['a'] = 10, ['A'] = 10,
+    ['b'] = 11, ['B'] = 11,
+    ['c'] = 12, ['C'] = 12,
+    ['d'] = 13, ['D'] = 13,
+    ['e'] = 14, ['E'] = 14,
+    ['f'] = 15, ['F'] = 15,
+  };
+
+  *digit = digits[(size_t)c];
+  return true;
+}
+
+static const char* _reflect_integer_radix_name(uint8_t radix) {
+  switch (radix) {
+    case 2:  return "binary";
+    case 10: return "decimal";
+    case 16: return "hexadecimal";
+  }
+
+  assert(false && "Unreachable");
+}
+
+static bool _reflect_lexer_current_char_to_digit_with_radix(ReflectLexer* lexer, uint8_t radix, uint8_t* digit) {
+  if (_reflect_char_to_digit_with_radix(_reflect_lexer_char_current(lexer), radix, digit)) {
+    return true;
+  }
+  return false;
+}
+
 static bool _reflect_lexer_integer_lex(ReflectLexer* lexer, uint64_t* out_result) {
   uint64_t result = 0;
-  while (isdigit(_reflect_lexer_char_current(lexer))) {
-    result = result * 10 + (uint64_t)(_reflect_lexer_char_current(lexer) - '0');
+  uint8_t  radix   = 10;
+
+  // Check for radix specification.
+  if (_reflect_lexer_char_current(lexer) == '0') {
+    _reflect_lexer_char_advance(lexer);
+
+    if (tolower(_reflect_lexer_char_current(lexer)) == 'x') {
+      _reflect_lexer_char_advance(lexer);
+      
+      radix = 16;
+      if (!_reflect_is_digit_with_radix(_reflect_lexer_char_current(lexer), radix)) {
+        lexer->error_code = REFLECT_ERROR_INVALID_INTEGER;
+        snprintf(
+          lexer->error_string,
+          REFLECT_LEXER_ERROR_STRING_MAX_LENGTH,
+          "invalid char \"%c\" in %s integer constant",
+          _reflect_lexer_char_current(lexer),
+          _reflect_integer_radix_name(radix)
+        );
+
+        // Skip over, for error handling
+        _reflect_lexer_char_advance(lexer);
+        return false;
+      }
+    } else if (_reflect_is_digit_with_radix(_reflect_lexer_char_current(lexer), 8)) {
+      radix = 8;
+    }
+  }
+
+  uint8_t digit;
+  while (_reflect_lexer_current_char_to_digit_with_radix(lexer, radix, &digit)) {
+    result = result * (uint64_t)radix + (uint64_t)digit;
     _reflect_lexer_char_advance(lexer);
   }
-  *out_result = result;
 
+  // TODO: Handle suffix
+
+  *out_result = result;
   return true;
 }
 
