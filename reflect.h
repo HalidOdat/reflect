@@ -58,9 +58,11 @@ typedef enum ReflectTokenType {
   REFLECT_TOKEN_COUNT
 } ReflectTokenType;
 
-typedef enum ReflectTokenModifier {
-  REFLECT_TOKEN_MODIFIER_NONE,
-} ReflectTokenModifier;
+typedef enum ReflectModifier {
+  REFLECT_MODIFIER_NONE,
+  REFLECT_MODIFIER_OCTAL,
+  REFLECT_MODIFIER_HEXADECIMAL,
+} ReflectModifier;
 
 typedef struct ReflectSourceLocation {
   uint32_t line;
@@ -69,6 +71,7 @@ typedef struct ReflectSourceLocation {
 
 typedef struct ReflectToken {
   ReflectTokenType      type;
+  ReflectModifier       modifier;
   ReflectSourceLocation location;
 
   union {
@@ -198,6 +201,11 @@ static void reflect__lexer_char_advance(ReflectLexer* lexer) {
   ++lexer->stream;
 }
 
+static void reflect__lexer_char_back(ReflectLexer* lexer) {
+  --lexer->location.column;
+  --lexer->stream;
+}
+
 static bool reflect__lexer_char_next_if(ReflectLexer* lexer, const char c) {
   if (reflect__lexer_char_current(lexer) == c) {
     reflect__lexer_char_advance(lexer);
@@ -206,7 +214,7 @@ static bool reflect__lexer_char_next_if(ReflectLexer* lexer, const char c) {
   return false;
 }
 
-static bool reflect__is_digit_with_radix(const char c, uint8_t radix) {
+static bool reflect__is_digit(const char c, uint8_t radix) {
   switch (radix) {
     case 2:  return c == '0' || c == '1';
     case 8:  return c >= '0' && c <= '7';
@@ -217,8 +225,8 @@ static bool reflect__is_digit_with_radix(const char c, uint8_t radix) {
   assert(false && "Unreachable");
 }
 
-static bool reflect__char_to_digit_with_radix(const char c, const uint8_t radix, uint8_t* digit) {
-  if (!reflect__is_digit_with_radix(c, radix)) {
+static bool reflect__to_digit(const char c, const uint8_t radix, uint8_t* digit) {
+  if (!reflect__is_digit(c, radix)) {
     return false;
   }
 
@@ -255,53 +263,48 @@ static const char* reflect__integer_radix_name(uint8_t radix) {
   assert(false && "Unreachable");
 }
 
-static bool reflect__lexer_current_char_to_digit_with_radix(ReflectLexer* lexer, uint8_t radix, uint8_t* digit) {
-  if (reflect__char_to_digit_with_radix(reflect__lexer_char_current(lexer), radix, digit)) {
-    return true;
-  }
-  return false;
+static bool reflect__lexer_current_char_is_digit(ReflectLexer* lexer, uint8_t radix) {
+  return reflect__is_digit(reflect__lexer_char_current(lexer), radix);
 }
 
-static bool reflect__lexer_integer_lex(ReflectLexer* lexer, uint64_t* out_result) {
+static bool reflect__lexer_current_char_to_digit(ReflectLexer* lexer, uint8_t radix, uint8_t* digit) {
+  return reflect__to_digit(reflect__lexer_char_current(lexer), radix, digit);
+}
+
+static bool reflect__lexer_token_integer_lex(ReflectLexer* lexer, ReflectToken* token) {
+  token->type     = REFLECT_TOKEN_INTEGER;
+  token->modifier = REFLECT_MODIFIER_NONE;
+  token->location = lexer->location;
+
   uint64_t result = 0;
-  uint8_t  radix   = 10;
+  uint8_t  radix  = 10;
 
   // Check for radix specification.
-  if (reflect__lexer_char_current(lexer) == '0') {
-    reflect__lexer_char_advance(lexer);
-
+  if (reflect__lexer_char_next_if(lexer, '0')) {
     if (tolower(reflect__lexer_char_current(lexer)) == 'x') {
       reflect__lexer_char_advance(lexer);
-      
-      radix = 16;
-      if (!reflect__is_digit_with_radix(reflect__lexer_char_current(lexer), radix)) {
-        lexer->error_code = REFLECT_ERROR_INVALID_INTEGER;
-        snprintf(
-          lexer->error_string,
-          REFLECT_LEXER_ERROR_STRING_MAX_LENGTH,
-          "invalid char \"%c\" in %s integer constant",
-          reflect__lexer_char_current(lexer),
-          reflect__integer_radix_name(radix)
-        );
 
-        // Skip over, for error handling
-        reflect__lexer_char_advance(lexer);
-        return false;
+      if (!reflect__lexer_current_char_is_digit(lexer, 16)) {
+        reflect__lexer_char_back(lexer);
+      } else {
+        token->modifier = REFLECT_MODIFIER_HEXADECIMAL;
+        radix = 16;
       }
-    } else if (reflect__is_digit_with_radix(reflect__lexer_char_current(lexer), 8)) {
+    } else if (reflect__lexer_current_char_is_digit(lexer, 8)) {
+      token->modifier = REFLECT_MODIFIER_OCTAL;
       radix = 8;
     }
   }
 
   uint8_t digit;
-  while (reflect__lexer_current_char_to_digit_with_radix(lexer, radix, &digit)) {
+  while (reflect__lexer_current_char_to_digit(lexer, radix, &digit)) {
     result = result * (uint64_t)radix + (uint64_t)digit;
     reflect__lexer_char_advance(lexer);
   }
 
   // TODO: Handle suffix
 
-  *out_result = result;
+  token->as.integer = result;
   return true;
 }
 
@@ -350,9 +353,8 @@ reflect__lexer_again:
       goto reflect__lexer_again;
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
-      token->type     = REFLECT_TOKEN_INTEGER;
-      token->location = lexer->location;
-      return reflect__lexer_integer_lex(lexer, &token->as.integer);
+      return reflect__lexer_token_integer_lex(lexer, token);
+
     REFLECT__LEXER_CASE1('[', REFLECT_TOKEN_LBRACKET);
     REFLECT__LEXER_CASE1(']', REFLECT_TOKEN_RBRACKET);
     REFLECT__LEXER_CASE1('(', REFLECT_TOKEN_LPAREN);

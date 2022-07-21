@@ -42,6 +42,8 @@ void lexer_test(const char* test_name, const char* source, ReflectToken test_cas
       case REFLECT_TOKEN_INTEGER:
         if (token.as.integer != test_cases->as.integer){
           printf("    Assertion #%d: FAILED - Expected integer %ld, got %ld\n", test_case_number, test_cases->as.integer, token.as.integer);
+        } else if (token.modifier != test_cases->modifier) {
+          printf("    Assertion #%d: FAILED - Modifier mismatch\n", test_case_number);
         } else if (!silent) {
           printf("    Assertion #%d: PASSED\n", test_case_number);
         }
@@ -93,14 +95,15 @@ void lexer_integer_tests() {
 
   lexer_test(
     "Simple Hexadecimal Integer Lexing",
-    "0x0 0x1 0x100000 0xabcdef 0xABCDEF 0x0aB6ceFe",
+    "0x0 0x1 0x100000 0xabcdef 0xABCDEF 0x0aB6ceFe 0X0aB6ceFe",
     (ReflectToken[]) {
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x1 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x100000 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xabcdef },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xABCDEF },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0aB6ceFe },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0,        .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x1,        .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x100000,   .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xabcdef,   .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0xABCDEF,   .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0x0aB6ceFe, .modifier = REFLECT_MODIFIER_HEXADECIMAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 0X0aB6ceFe, .modifier = REFLECT_MODIFIER_HEXADECIMAL },
       { 0 }
     }
   );
@@ -109,10 +112,10 @@ void lexer_integer_tests() {
     "Simple Octal Integer Lexing",
     "00 01 01234567 000333300",
     (ReflectToken[]) {
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 00 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01234567 },
-      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 000333300 },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 00,        .modifier = REFLECT_MODIFIER_OCTAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01,        .modifier = REFLECT_MODIFIER_OCTAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 01234567,  .modifier = REFLECT_MODIFIER_OCTAL },
+      { .type = REFLECT_TOKEN_INTEGER, .as.integer = 000333300, .modifier = REFLECT_MODIFIER_OCTAL },
       { 0 }
     }
   );
