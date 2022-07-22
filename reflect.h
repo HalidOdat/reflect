@@ -67,6 +67,15 @@ typedef enum ReflectModifier {
   REFLECT_MODIFIER_COUNT,
 } ReflectModifier;
 
+typedef enum ReflectSuffix {
+  REFLECT_SUFFIX_NONE,
+  REFLECT_SUFFIX_L,
+  REFLECT_SUFFIX_LL,
+  REFLECT_SUFFIX_U,
+  REFLECT_SUFFIX_UL,
+  REFLECT_SUFFIX_ULL,
+} ReflectSuffix;
+
 // TODO: Temporary
 #define REFLECT_MAX_INDENTIFIER_LENGTH 256
 
@@ -323,6 +332,20 @@ static bool reflect__lexer_token_integer_lex(ReflectLexer* lexer, ReflectToken* 
   }
 
   // TODO: Handle suffix
+  char c;
+  if (isalpha(c = reflect__lexer_char_current(lexer)) || c == '_') {
+    const size_t capacity = 128;
+    size_t count = 0;
+    char suffix[capacity];
+    while (isalnum(c = reflect__lexer_char_current(lexer)) || c == '_') {
+      if (count + 2 == capacity) {
+        assert(false && "TODO: handle bigger suffix");
+      }
+      suffix[count++] = c;
+      reflect__lexer_char_advance(lexer);   
+    }
+    suffix[count] = '\0';
+  }
 
   token->as.integer = result;
   return true;

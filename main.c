@@ -4,11 +4,9 @@
 #include "reflect.h"
 
 int main() {
-  printf("Hello, world!\n");
-
   ReflectLexer lexer;
   ReflectToken token;
-  reflect_lexer_init(&lexer, "1 10 100\n1\n  1");
+  reflect_lexer_init(&lexer, "1u 10ull 100ll\n1l\n  1lu");
 
   uint32_t count = 1;
   while (true) {
@@ -21,13 +19,13 @@ int main() {
       break;
     }
 
-    printf(
-      "Token (%s) :%u:%u: %ld\n",
-      reflect_token_type_to_string(token.type),
-      token.location.line,
-      token.location.column,
-      token.as.integer
-    );
+    // printf(
+    //   "Token (%s) :%u:%u: %ld\n",
+    //   reflect_token_type_to_string(token.type),
+    //   token.location.line,
+    //   token.location.column,
+    //   token.as.integer
+    // );
 
     count++;
   }
