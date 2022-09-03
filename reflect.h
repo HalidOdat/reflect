@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// TODO: Temporary
+#define REFLECT_MAX_INDENTIFIER_LENGTH 256
+#define REFLECT_MAX_SUFFIX_LENGTH 32
 
 typedef enum ReflectTokenType {
   REFLECT_TOKEN_EOF,
@@ -76,9 +79,6 @@ typedef enum ReflectSuffix {
   REFLECT_SUFFIX_ULL,
 } ReflectSuffix;
 
-// TODO: Temporary
-#define REFLECT_MAX_INDENTIFIER_LENGTH 256
-
 typedef struct ReflectSourceLocation {
   uint32_t line;
   uint32_t column;
@@ -88,6 +88,8 @@ typedef struct ReflectToken {
   ReflectTokenType      type;
   ReflectModifier       modifier;
   ReflectSourceLocation location;
+
+  char suffix_string[REFLECT_MAX_SUFFIX_LENGTH + 1];
 
   union {
     uint64_t integer;
@@ -334,17 +336,15 @@ static bool reflect__lexer_token_integer_lex(ReflectLexer* lexer, ReflectToken* 
   // TODO: Handle suffix
   char c;
   if (isalpha(c = reflect__lexer_char_current(lexer)) || c == '_') {
-    const size_t capacity = 128;
     size_t count = 0;
-    char suffix[capacity];
     while (isalnum(c = reflect__lexer_char_current(lexer)) || c == '_') {
-      if (count + 2 == capacity) {
+      if (count + 2 == REFLECT_MAX_SUFFIX_LENGTH) {
         assert(false && "TODO: handle bigger suffix");
       }
-      suffix[count++] = c;
+      token->suffix_string[count++] = c;
       reflect__lexer_char_advance(lexer);   
     }
-    suffix[count] = '\0';
+    token->suffix_string[REFLECT_MAX_SUFFIX_LENGTH] = '\0';
   }
 
   token->as.integer = result;
